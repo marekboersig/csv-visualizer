@@ -6,6 +6,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QFileDialog, QListWidget,
                                QGroupBox, QTextEdit)
+from PySide6.QtCore import Qt
 
 
 class CSVPlotterApp(QMainWindow):
@@ -39,15 +40,6 @@ class CSVPlotterApp(QMainWindow):
         file_layout.addWidget(self.file_label)
         controls_layout.addWidget(file_group)
 
-        # Metadata display
-        metadata_group = QGroupBox("Metadata")
-        metadata_layout = QVBoxLayout(metadata_group)
-        self.metadata_text = QTextEdit()
-        self.metadata_text.setReadOnly(True)
-        self.metadata_text.setMaximumHeight(100)
-        metadata_layout.addWidget(self.metadata_text)
-        controls_layout.addWidget(metadata_group)
-
         # Y-axis selection
         column_group = QGroupBox("Data Values Selection (Y-Axis)")
         column_layout = QVBoxLayout(column_group)
@@ -58,13 +50,21 @@ class CSVPlotterApp(QMainWindow):
 
         controls_layout.addWidget(column_group)
 
+        # Metadata display - now placed below data values selection
+        metadata_group = QGroupBox("Metadata")
+        metadata_layout = QVBoxLayout(metadata_group)
+        self.metadata_text = QTextEdit()
+        self.metadata_text.setReadOnly(True)
+        # Remove height restriction to show all metadata
+        metadata_layout.addWidget(self.metadata_text)
+        controls_layout.addWidget(metadata_group)
+
         # Plot button
         plot_button = QPushButton("Generate Plot")
         plot_button.clicked.connect(self.generate_plot)
         controls_layout.addWidget(plot_button)
 
-        # Add stretch at the bottom
-        controls_layout.addStretch()
+        # No stretch at the bottom to allow metadata to use available space
 
         main_layout.addWidget(controls_panel)
 
@@ -100,7 +100,8 @@ class CSVPlotterApp(QMainWindow):
                 # Format metadata for display
                 metadata_text = ""
                 for key, value in metadata.items():
-                    metadata_text += f"{key}: {value}\n"
+                    if key.strip() and value.strip():  # Only display non-empty values
+                        metadata_text += f"{key}: {value}\n"
                 self.metadata_text.setText(metadata_text)
 
                 # The actual data starts at line 3 (index 2)
