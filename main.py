@@ -5,8 +5,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QFileDialog, QListWidget,
-                               QGroupBox, QTextEdit)
-from PySide6.QtCore import Qt
+                               QGroupBox, QTextEdit, QAbstractItemView)
 
 
 class CSVPlotterApp(QMainWindow):
@@ -15,22 +14,41 @@ class CSVPlotterApp(QMainWindow):
         self.setWindowTitle("Timestep Data Plotter")
         self.setGeometry(100, 100, 1200, 800)
 
-        # Data storage
-        self.df = None
-        self.metadata_df = None
+        # Data storage variables
+        self.df = None              # converted data frame
+        self.metadata_df = None     # metadata frame
         self.file_path = None
 
-        # Main layout
+        # Main layout and widget
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        main_layout = QHBoxLayout(main_widget)
+        self.main_layout = QHBoxLayout(main_widget)
 
-        # Controls panel
+        # Generate control panel on left side
+        self.metadata_text = None
+        self.y_list = None
+        self.file_label = None
+        self.generate_control_panel()
+
+        # Generate plot area
+        plot_panel = QWidget()
+        plot_layout = QVBoxLayout(plot_panel)
+
+        self.figure = plt.figure(figsize=(10, 8))
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+
+        plot_layout.addWidget(self.toolbar)
+        plot_layout.addWidget(self.canvas)
+
+        self.main_layout.addWidget(plot_panel)
+
+    def generate_control_panel(self):
         controls_panel = QWidget()
         controls_layout = QVBoxLayout(controls_panel)
         controls_panel.setMaximumWidth(300)
 
-        # File selection
+        # File selection group
         file_group = QGroupBox("File Selection")
         file_layout = QVBoxLayout(file_group)
         self.file_label = QLabel("No file selected")
@@ -43,19 +61,16 @@ class CSVPlotterApp(QMainWindow):
         # Y-axis selection
         column_group = QGroupBox("Data Values Selection (Y-Axis)")
         column_layout = QVBoxLayout(column_group)
-
-        self.y_list = QListWidget()
-        self.y_list.setSelectionMode(QListWidget.MultiSelection)
+        self.y_list = QListWidget()  # list of selectable columns
+        self.y_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         column_layout.addWidget(self.y_list)
-
         controls_layout.addWidget(column_group)
 
-        # Metadata display - now placed below data values selection
+        # Metadata display
         metadata_group = QGroupBox("Metadata")
         metadata_layout = QVBoxLayout(metadata_group)
         self.metadata_text = QTextEdit()
         self.metadata_text.setReadOnly(True)
-        # Remove height restriction to show all metadata
         metadata_layout.addWidget(self.metadata_text)
         controls_layout.addWidget(metadata_group)
 
@@ -64,22 +79,7 @@ class CSVPlotterApp(QMainWindow):
         plot_button.clicked.connect(self.generate_plot)
         controls_layout.addWidget(plot_button)
 
-        # No stretch at the bottom to allow metadata to use available space
-
-        main_layout.addWidget(controls_panel)
-
-        # Plot area
-        plot_panel = QWidget()
-        plot_layout = QVBoxLayout(plot_panel)
-
-        self.figure = plt.figure(figsize=(10, 8))
-        self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-
-        plot_layout.addWidget(self.toolbar)
-        plot_layout.addWidget(self.canvas)
-
-        main_layout.addWidget(plot_panel)
+        self.main_layout.addWidget(controls_panel)
 
     def open_csv_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv)")
