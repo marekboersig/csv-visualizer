@@ -6,6 +6,10 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 
 class PlotWidget(QWidget):
     def __init__(self, app):
+        """
+        Initialize the widget showing the plot of the underlying data
+        :param app: the parent application
+        """
         super().__init__()
 
         plot_layout = QVBoxLayout(self)
@@ -18,33 +22,65 @@ class PlotWidget(QWidget):
         plot_layout.addWidget(self.toolbar)
         plot_layout.addWidget(self.canvas)
 
-    def generate_plot(self):
+    def generate_plot(self) -> None:
+        """
+        Generate the plot for the selected data.
+        :return: None
+        """
         if self.app.df is None:
             return
 
-        x_column = 'Point'  # Always use Point as X-axis
+        # get x-axis and selected y-axis
+        x_column = 'Point'  # always use point as X-axis
         y_columns = [self.app.control_panel.y_list.item(i).text() for i in range(self.app.control_panel.y_list.count())
-                     if self.app.control_panel.y_list.item(i).isSelected()]
+                     if self.app.control_panel.y_list.item(i).isSelected()] # filter selected columns
 
         if not y_columns:
             return
 
-        # Clear the figure
+        # clear the figure
         self.figure.clear()
 
-        # If more than one column, use multiple y-axes
+        # draw new figure
+        ax = self.draw_axes(x_column, y_columns)
+        ax.set_xlabel('Timestep (Point)')
+        ax.set_title('Data Visualization')
+        ax.grid(True)
+
+        # create a combined legend
+        all_handles = []
+        all_labels = []
+        for ax in [ax for ax in self.figure.axes]:
+            handles, labels = ax.get_legend_handles_labels()
+            all_handles.extend(handles)
+            all_labels.extend(labels)
+
+        if all_handles:
+            self.figure.legend(all_handles, all_labels, loc='upper right')
+
+        self.figure.tight_layout()
+        self.canvas.draw()
+
+    def draw_axes(self, x_column, y_columns):
+        """
+        Draw the data for each selected data column.
+        :param x_column: the point column that
+        :param y_columns: the data columns
+        :return: all the axes of the plot
+        """
+        # if more than one column, use multiple y-axes
         if len(y_columns) > 1:
-            # Primary axis
+            # primary axis
             ax = self.figure.add_subplot(111)
             axes = [ax]
 
-            # Plot first series on primary axis
+            # plot first series on primary axis
             y_col = y_columns[0]
             ax.plot(self.app.df[x_column], self.app.df[y_col], 'b-', label=y_col)
             ax.set_ylabel(y_col, color='b')
             ax.tick_params(axis='y', labelcolor='b')
 
-            # Add secondary axes for additional series
+            # add secondary axes for additional series
             colors = ['g', 'r', 'c', 'm', 'y', 'k']
             for i, y_col in enumerate(y_columns[1:]):
                 color = colors[i % len(colors)]
@@ -63,39 +99,9 @@ class PlotWidget(QWidget):
                 ax_new.tick_params(axis='y', labelcolor=color)
                 axes.append(ax_new)
         else:
-            # Single column - simple plot
+            # single column - simple plot
             ax = self.figure.add_subplot(111)
             y_col = y_columns[0]
             ax.plot(self.app.df[x_column], self.app.df[y_col], label=y_col)
             ax.set_ylabel(y_col)
-
-        # Set labels and grid on primary axis
-        ax.set_xlabel('Timestep (Point)')
-
-        # Add metadata to title if available
-        if hasattr(self, 'metadata_df') and self.app.metadata_df is not None:
-            try:
-                disc_info = (f"Disc: {self.metadata_df['Disc Diameter Inside'].iloc[0]}"
-                             f"/{self.metadata_df['Disc Diameter Outside'].iloc[0]}mm")
-                ax.set_title(f'Data Visualization - {disc_info}')
-            finally:
-                ax.set_title('Data Visualization')
-        else:
-            ax.set_title('Data Visualization')
-
-        # Always enable grid
-        ax.grid(True)
-
-        # Create a combined legend
-        all_handles = []
-        all_labels = []
-        for ax in [ax for ax in self.figure.axes]:
-            handles, labels = ax.get_legend_handles_labels()
-            all_handles.extend(handles)
-            all_labels.extend(labels)
-
-        if all_handles:
-            self.figure.legend(all_handles, all_labels, loc='upper right')
-
-        self.figure.tight_layout()
-        self.canvas.draw()
+        return ax

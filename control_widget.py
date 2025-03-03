@@ -4,6 +4,10 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QGroupBox, QLabel, QPushButt
 
 class ControlWidget(QWidget):
     def __init__(self, app):
+        """
+        Initialize the control widget containing all functions to handle the graph creation.
+        :param app: the parent application
+        """
         super().__init__()
 
         controls_layout = QVBoxLayout(self)
